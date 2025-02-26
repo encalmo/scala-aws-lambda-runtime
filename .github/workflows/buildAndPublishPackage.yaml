@@ -1,0 +1,83 @@
+name: Build and publish package
+
+on:
+  workflow_call:
+    inputs:
+      tag-prefix:
+        required: true
+        type: string  
+      version-bump:
+        type: string
+        required: true  
+        default: 'minor'
+    secrets:
+      SONATYPE_TOKEN:
+        required: true 
+      GPG_SECRET_KEY:
+        required: true 
+      GPG_SECRET_KEY_ID:
+        required: true 
+
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: write # This is required for actions/checkout
+  packages: write
+  pull-requests: write 
+
+env:
+  TAG_PREFIX: '${{ inputs.tag-prefix }}-'  
+
+jobs:
+  buildAndPublishPackage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: coursier/cache-action@v6
+      - uses: VirtusLab/scala-cli-setup@main
+        with:
+          jvm: adoptium:1.21
+      - name: Setup gpg
+        id: gpg
+        run: |
+          echo "${{ secrets.GPG_SECRET_KEY }}" | base64 -d | gpg --import
+          gpg -K
+      - id: version
+        name: Compute new version   
+        run: ./scripts/computeNewVersion.sc --prefix='${{ env.TAG_PREFIX }}' --bump=${{ inputs.version-bump }} >> "$GITHUB_OUTPUT"
+      - name: Create release bundle
+        run: './scripts/createReleaseBundle.sc --version=${{ steps.version.outputs.new_version }} --gpg-key=${{ secrets.GPG_SECRET_KEY_ID }}'
+      - name: Upload bundle to Sonatype
+        run: |
+          curl --request POST \
+          --verbose \
+          --header 'Authorization: Bearer ${{ secrets.SONATYPE_TOKEN }}' \
+          --form bundle=@bundle.zip \
+          https://central.sonatype.com/api/v1/publisher/upload?publishingType=AUTOMATIC&name=${{ env.TAG_PREFIX }}-${{ steps.version.outputs.new_version }}
+      - name: Push tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ steps.version.outputs.new_version }}
+          tag_prefix: ${{ env.TAG_PREFIX }}   
+      - name: Create GitHub Release
+        if: ${{ inputs.version-bump != 'keep' }}
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_PREFIX }}${{ steps.version.outputs.new_version }}
+          release_name: ${{ inputs.tag-prefix }} release ${{ steps.version.outputs.new_version }}
+          draft: false
+          prerelease: false 
+      - name: Move version tag
+        if: ${{ inputs.version-bump == 'keep' }}
+        uses: richardsimko/update-tag@v1
+        with:
+          tag_name: ${{ env.TAG_PREFIX }}${{ steps.version.outputs.new_version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      
+
+
