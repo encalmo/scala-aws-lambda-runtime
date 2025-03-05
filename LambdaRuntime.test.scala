@@ -1,6 +1,6 @@
 package org.encalmo.lambda
 
-import org.encalmo.lambda.Utils.*
+import org.encalmo.utils.JsonUtils.*
 import upickle.default.*
 
 import java.io.ByteArrayOutputStream

@@ -4,6 +4,7 @@ This Scala3 library provides a custom [AWS Lambda](https://aws.amazon.com/pm/lam
 
 See: 
 - https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html
+- https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
 - https://docs.aws.amazon.com/lambda/latest/dg/runtimes-walkthrough.html
 
 ## Dependencies
