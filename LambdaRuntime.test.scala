@@ -14,16 +14,21 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   val lambdaService = new LambdaServiceFixture()
   override def munitFixtures = List(lambdaService)
 
+  case class MyContext(foo: String)
+
   test("Lambda runtime test execution 1") {
     val lambdaRuntime = new LambdaRuntime {
+
+      type ApplicationContext = MyContext
 
       override def initialize(using environment: LambdaEnvironment) = {
         environment.info(
           s"Initializing test echo lambda ${environment.getFunctionName()} ..."
         )
+        MyContext(foo = "bar")
       }
 
-      override def handleRequest(input: String)(using LambdaContext, ApplicationContext): String =
+      override def handleRequest(input: String)(using LambdaContext, MyContext): String =
         input.reverse
     }
 
@@ -35,6 +40,8 @@ class LambdaRuntimeSpec extends munit.FunSuite {
 
   test("Lambda runtime test execution 2") {
     val lambdaRuntime = new LambdaRuntime {
+
+      type ApplicationContext = Unit
 
       override def initialize(using environment: LambdaEnvironment) = {
         environment.info(
@@ -66,6 +73,8 @@ class LambdaRuntimeSpec extends munit.FunSuite {
     val lambdaRuntime =
       new LambdaRuntime {
 
+        type ApplicationContext = Unit
+
         override def initialize(using environment: LambdaEnvironment) = {
           environment.info(
             s"Initializing lambda ${environment.getFunctionName()} ..."
@@ -94,7 +103,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test("Lambda runtime execution when lambda is failing") {
-    val lambdaRuntime = new LambdaRuntime {
+    val lambdaRuntime = new SimpleLambdaRuntime {
 
       override def initialize(using environment: LambdaEnvironment) = {
         environment.info(
@@ -121,13 +130,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test("Lambda runtime hosted execution") {
-    val lambdaRuntime = new LambdaRuntime {
-
-      override def initialize(using environment: LambdaEnvironment) = {
-        environment.info(
-          s"Initializing lambda ${environment.getFunctionName()} ..."
-        )
-      }
+    val lambdaRuntime = new SimpleLambdaRuntime {
 
       override def handleRequest(input: String)(using LambdaContext, ApplicationContext): String =
         input.reverse

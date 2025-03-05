@@ -7,7 +7,7 @@ object TestEchoLambda {
   @static def main(args: Array[String]): Unit = new TestEchoLambda().run()
 }
 
-class TestEchoLambda(log: Option[String] = None) extends LambdaRuntime {
+class TestEchoLambda(log: Option[String] = None) extends SimpleLambdaRuntime {
 
   override def initialize(using environment: LambdaEnvironment) = {
     environment.info(

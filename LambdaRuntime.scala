@@ -22,6 +22,12 @@ import scala.jdk.OptionConverters.*
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
+/** Simplified lambda runtime when no application context is required. */
+trait SimpleLambdaRuntime extends LambdaRuntime {
+  type ApplicationContext = Unit
+  override def initialize(using LambdaEnvironment): Unit = ()
+}
+
 /** Custom lambda runtime base. (https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html)
   */
 trait LambdaRuntime extends EventHandler, EventHandlerTag {
@@ -139,10 +145,6 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
                   true,
                   configure(initialize)
                 )
-                .match {
-                  case _: Unit               => NoContext
-                  case c: ApplicationContext => c
-                }
 
             private val semaphore = new Semaphore(1)
             semaphore.acquire() // pausing execution until started
@@ -459,10 +461,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
                   debug(
                     s"$tag ${INIT}LAMBDA INIT ${AnsiColor.BOLD}${input}"
                   )
-                  Some(configure(initialize).match {
-                    case _: Unit               => NoContext
-                    case c: ApplicationContext => c
-                  })
+                  Some(configure(initialize))
                 }
             }
           )
