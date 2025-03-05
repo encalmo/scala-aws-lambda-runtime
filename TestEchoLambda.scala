@@ -9,13 +9,13 @@ object TestEchoLambda {
 
 class TestEchoLambda(log: Option[String] = None) extends LambdaRuntime {
 
-  lazy val config: Unit = configure { (environment: LambdaEnvironment) =>
+  override def initialize(using environment: LambdaEnvironment) = {
     environment.info(
       s"Initializing test echo lambda ${environment.getFunctionName()} ..."
     )
   }
 
-  override inline def handleRequest(input: String)(using LambdaContext): String = {
+  override inline def handleRequest(input: String)(using LambdaContext, ApplicationContext): String = {
     print(s"${AnsiColor.GREEN}Handling lambda request.")
     print(s" Input: $input")
     System.out.println(s"${AnsiColor.RESET}")

@@ -5,8 +5,9 @@ import com.amazonaws.services.lambda.runtime.CognitoIdentity
 import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.logging.LogLevel
+import org.encalmo.lambda.AnsiColor.*
 
-import scala.io.AnsiColor
+import scala.io.AnsiColor.*
 import scala.jdk.OptionConverters.*
 
 /** Lambda invocation context data. */
@@ -82,7 +83,7 @@ object LambdaContext {
         lambdaContext
           .getLogger()
           .log(
-            s"${AnsiColor.BLUE}[${lambdaContext.getFunctionName()}] $message${AnsiColor.RESET}",
+            s"${PREFIX}[${lambdaContext.getFunctionName()}] $message${RESET}",
             LogLevel.DEBUG
           )
       else ()
@@ -95,7 +96,7 @@ object LambdaContext {
         lambdaContext
           .getLogger()
           .log(
-            s"${AnsiColor.BLUE}[${lambdaContext.getFunctionName()}] $message${AnsiColor.RESET}",
+            s"${PREFIX}[${lambdaContext.getFunctionName()}] $message${RESET}",
             LogLevel.TRACE
           )
       else ()
@@ -106,8 +107,8 @@ object LambdaContext {
       lambdaContext
         .getLogger()
         .log(
-          s"${AnsiColor.RED_B}${AnsiColor.WHITE}[${lambdaContext
-              .getFunctionName()}][ERROR] $message${AnsiColor.RESET}",
+          s"${RED_B}${WHITE}[${lambdaContext
+              .getFunctionName()}][ERROR] $message${RESET}",
           LogLevel.ERROR
         )
   }

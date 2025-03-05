@@ -2,13 +2,14 @@ package org.encalmo.lambda
 
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.logging.LogLevel
+import org.encalmo.lambda.AnsiColor.*
 
 import java.io.PrintStream
 import java.net.URI
 import java.net.http.*
 import java.net.http.HttpRequest.BodyPublishers
 import scala.collection.mutable
-import scala.io.AnsiColor
+import scala.io.AnsiColor.*
 import scala.jdk.CollectionConverters.*
 
 /** Provides access to the lambda instance environment. */
@@ -198,8 +199,8 @@ object LambdaEnvironment {
           lambdaEnvironment
             .getLogger()
             .log(
-              s"${AnsiColor.BLUE}[${lambdaEnvironment
-                  .getFunctionName()}] $message${AnsiColor.RESET}",
+              s"${PREFIX}[${lambdaEnvironment
+                  .getFunctionName()}] $message${RESET}",
               LogLevel.DEBUG
             )
       else ()
@@ -215,8 +216,8 @@ object LambdaEnvironment {
           lambdaEnvironment
             .getLogger()
             .log(
-              s"${AnsiColor.BLUE}[${lambdaEnvironment
-                  .getFunctionName()}] $message${AnsiColor.RESET}",
+              s"${PREFIX}[${lambdaEnvironment
+                  .getFunctionName()}] $message${RESET}",
               LogLevel.TRACE
             )
       else ()
@@ -230,8 +231,8 @@ object LambdaEnvironment {
         lambdaEnvironment
           .getLogger()
           .log(
-            s"${AnsiColor.RED_B}${AnsiColor.WHITE}[${lambdaEnvironment
-                .getFunctionName()}][ERROR] $message${AnsiColor.RESET}",
+            s"${RED_B}${WHITE}[${lambdaEnvironment
+                .getFunctionName()}][ERROR] $message${RESET}",
             LogLevel.ERROR
           )
   }

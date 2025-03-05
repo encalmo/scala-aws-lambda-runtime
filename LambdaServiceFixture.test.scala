@@ -1,6 +1,9 @@
 package org.encalmo.lambda
 
-import com.sun.net.httpserver.{HttpContext, HttpExchange, HttpHandler, HttpServer}
+import com.sun.net.httpserver.HttpContext
+import com.sun.net.httpserver.HttpExchange
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import munit.Assertions
 import upickle.default.*
 
@@ -8,11 +11,14 @@ import java.net.InetSocketAddress
 import java.util.UUID
 import java.util.concurrent.LinkedBlockingQueue
 import scala.concurrent.ExecutionContext.Implicits.given
-import scala.concurrent.{Future, Promise}
+import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.io.Source
 import scala.jdk.CollectionConverters.*
 import scala.reflect.ClassTag
-import scala.util.{Failure, Success, Try}
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
 
 case class LambdaError(
     success: Boolean,

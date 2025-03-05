@@ -17,11 +17,13 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   test("Lambda runtime test execution 1") {
     val lambdaRuntime = new LambdaRuntime {
 
-      lazy val config = configure { (environment: LambdaEnvironment) =>
-        println(s"Initializing 1st lambda ${environment.getFunctionName()} ...")
+      override def initialize(using environment: LambdaEnvironment) = {
+        environment.info(
+          s"Initializing test echo lambda ${environment.getFunctionName()} ..."
+        )
       }
 
-      override def handleRequest(input: String)(using LambdaContext): String =
+      override def handleRequest(input: String)(using LambdaContext, ApplicationContext): String =
         input.reverse
     }
 
@@ -34,12 +36,15 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   test("Lambda runtime test execution 2") {
     val lambdaRuntime = new LambdaRuntime {
 
-      lazy val config = configure { (environment: LambdaEnvironment) =>
-        println(s"Initializing 2nd lambda ${environment.getFunctionName()} ...")
+      override def initialize(using environment: LambdaEnvironment) = {
+        environment.info(
+          s"Initializing lambda ${environment.getFunctionName()} ..."
+        )
       }
 
       override def handleRequest(input: String)(using
-          LambdaContext
+          LambdaContext,
+          ApplicationContext
       ): String =
         ApiGatewayResponse(
           body = input.reverse,
@@ -61,14 +66,15 @@ class LambdaRuntimeSpec extends munit.FunSuite {
     val lambdaRuntime =
       new LambdaRuntime {
 
-        lazy val config = configure { (environment: LambdaEnvironment) =>
-          println(
-            s"Initializing 3rd lambda ${environment.getFunctionName()} ..."
+        override def initialize(using environment: LambdaEnvironment) = {
+          environment.info(
+            s"Initializing lambda ${environment.getFunctionName()} ..."
           )
         }
 
         override def handleRequest(input: String)(using
-            LambdaContext
+            LambdaContext,
+            ApplicationContext
         ): String =
           ApiGatewayResponse(
             body = input.readAs[ApiGatewayRequest].body.reverse,
@@ -89,7 +95,14 @@ class LambdaRuntimeSpec extends munit.FunSuite {
 
   test("Lambda runtime execution when lambda is failing") {
     val lambdaRuntime = new LambdaRuntime {
-      override def handleRequest(input: String)(using LambdaContext): String =
+
+      override def initialize(using environment: LambdaEnvironment) = {
+        environment.info(
+          s"Initializing lambda ${environment.getFunctionName()} ..."
+        )
+      }
+
+      override def handleRequest(input: String)(using LambdaContext, ApplicationContext): String =
         println("About to throw an exception from inside lambda ...")
         throw new Exception("Foo")
     }
@@ -109,7 +122,14 @@ class LambdaRuntimeSpec extends munit.FunSuite {
 
   test("Lambda runtime hosted execution") {
     val lambdaRuntime = new LambdaRuntime {
-      override def handleRequest(input: String)(using LambdaContext): String =
+
+      override def initialize(using environment: LambdaEnvironment) = {
+        environment.info(
+          s"Initializing lambda ${environment.getFunctionName()} ..."
+        )
+      }
+
+      override def handleRequest(input: String)(using LambdaContext, ApplicationContext): String =
         input.reverse
     }
       .initializeLambdaRuntime(
@@ -293,19 +313,19 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test("NoAnsiColors outputs no ansi colors") {
-    import org.encalmo.lambda.LambdaRuntime.AnsiColor.*
+    import org.encalmo.lambda.AnsiColor.*
     import scala.io.AnsiColor.*
     val message =
-      s"${BLUE}Hello ${REQUEST}World!${RESET}\n${GREEN}How are you today?${RESET}"
+      s"${PREFIX}Hello ${REQUEST}World!${RESET}\n${GREEN}How are you today?${RESET}"
     SystemOutLambdaLogger.log(message)
     NoAnsiColors.printNoAnsi(message, System.out)
   }
 
   test("json array print stream") {
-    import org.encalmo.lambda.LambdaRuntime.AnsiColor.*
+    import org.encalmo.lambda.AnsiColor.*
     import scala.io.AnsiColor.*
     val message =
-      s"${BLUE}Hello ${REQUEST}\"World\"!${RESET}\n${GREEN}How are you today?${RESET}"
+      s"${PREFIX}Hello ${REQUEST}\"World\"!${RESET}\n${GREEN}How are you today?${RESET}"
     val capture = CapturingPrintStream()
     val jsonArrayPrintStream = NoAnsiColorJsonArray("[test]", "[end]", capture.out)
     jsonArrayPrintStream.out.println(" " * 3)

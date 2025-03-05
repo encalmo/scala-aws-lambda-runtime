@@ -1,7 +1,7 @@
 package org.encalmo.lambda
 
 import com.amazonaws.services.lambda.runtime.logging.LogLevel
-import org.encalmo.lambda.LambdaRuntime.AnsiColor.*
+import org.encalmo.lambda.AnsiColor.*
 
 import java.io.PrintStream
 import java.net.URI
@@ -15,6 +15,7 @@ import java.util.concurrent.Semaphore
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
+import java.util.function.BinaryOperator
 import scala.io.AnsiColor
 import scala.jdk.CollectionConverters.*
 import scala.jdk.OptionConverters.*
@@ -35,28 +36,9 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
   private val testLambdaEnvironment: AtomicReference[Option[LambdaEnvironment]] =
     new AtomicReference(None)
 
-  /** Lambda configuration method. Provide your setup logic here.
-    *
-    * IN ORDER TO WORK MUST BE DECLARED USING THE FOLLOWING TEMPLATE:
-    * @example
-    *   lazy val config: MyConfig = configure{(lambdaEnvironment: LambdaEnvironment) => MyConfig(...)}
-    */
-  final def configure[T](f: LambdaEnvironment ?=> T): T =
-    instance.getAcquire() match {
-      case Some(i) =>
-        trace("Configuring lambda ...")(using i.lambdaEnvironment)
-        f(using i.lambdaEnvironment)
-      case None =>
-        testLambdaEnvironment.getAcquire() match {
-          case Some(le) =>
-            trace("Configuring lambda using test environment ...")(using le)
-            f(using le)
-          case None =>
-            throw new IllegalStateException(
-              "Lambda instance is not initialized yet at this point. Use `lazy val config = configure(...)` declaration."
-            )
-        }
-    }
+  /** Handle of the current test application context. */
+  private val testApplicationContext: AtomicReference[Option[ApplicationContext]] =
+    new AtomicReference(None)
 
   val ZoneUTC = ZoneId.of("UTC")
 
@@ -80,6 +62,8 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
     lazy val lambdaEnvironment: LambdaEnvironment
 
+    lazy val applicationContext: ApplicationContext
+
     /** Start receiving events. */
     def start(): Instance
 
@@ -98,6 +82,24 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
   final inline def run(): Unit = {
     initializeLambdaRuntime().start().waitUntilInterrupted()
   }
+
+  /** Configure something with lambda environment provided. */
+  private def configure[T](f: LambdaEnvironment ?=> T): T =
+    instance.getAcquire() match {
+      case Some(i) =>
+        trace("Configuring lambda ...")(using i.lambdaEnvironment)
+        f(using i.lambdaEnvironment)
+      case None =>
+        testLambdaEnvironment.getAcquire() match {
+          case Some(le) =>
+            trace("Configuring lambda using test environment ...")(using le)
+            f(using le)
+          case None =>
+            throw new IllegalStateException(
+              "Lambda instance is not initialized yet at this point. Use `lazy val config = configure(...)` declaration."
+            )
+        }
+    }
 
   /** Creates lambda runtime instance. */
   final def initializeLambdaRuntime(
@@ -118,6 +120,30 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
             lambdaEnvironment.setCustomOut()
 
+            val logPrefix =
+              if (lambdaEnvironment.shouldLogStructuredJson)
+              then s"""{"log":"INIT","lambda":"${lambdaEnvironment.getFunctionName()}","""
+              else s"[${lambdaEnvironment.getFunctionName()}] LAMBDA INIT {"
+
+            val logSuffix =
+              if (lambdaEnvironment.shouldLogStructuredJson)
+              then s""","lambdaVersion":"${lambdaEnvironment.getFunctionVersion()}"}"""
+              else "}"
+
+            lazy val applicationContext: ApplicationContext =
+              LambdaRuntime
+                .withLogCapture(
+                  lambdaEnvironment,
+                  logPrefix,
+                  logSuffix,
+                  true,
+                  configure(initialize)
+                )
+                .match {
+                  case _: Unit               => NoContext
+                  case c: ApplicationContext => c
+                }
+
             private val semaphore = new Semaphore(1)
             semaphore.acquire() // pausing execution until started
             private val active = new AtomicBoolean(true)
@@ -130,7 +156,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
                   try {
                     semaphore.acquire()
                     lambdaInvocationDebugMode = lambdaEnvironment.isDebugMode
-                    invokeHandleRequest(id)
+                    invokeHandleRequest(id)(using lambdaEnvironment, applicationContext)
                     trace(s"[$id] Done.")
                   } catch {
                     case e: InterruptedException =>
@@ -215,7 +241,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
    * ---------------------------------------------------------- */
   private final def invokeHandleRequest(
       id: Int
-  )(using lambdaEnvironment: LambdaEnvironment): Unit = {
+  )(using lambdaEnvironment: LambdaEnvironment, applicationContext: ApplicationContext): Unit = {
     lambdaEnvironment.setCustomOut()
 
     val functionName = lambdaEnvironment.getFunctionName()
@@ -273,7 +299,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
     )
 
     try {
-      val context = LambdaContext(
+      val lambdaContext = LambdaContext(
         requestId,
         event.headers
           .map()
@@ -309,7 +335,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
             logSuffix,
             lambdaInvocationDebugMode,
             try {
-              Right(handleRequest(input)(using context).trim())
+              Right(handleRequest(input)(using lambdaContext, applicationContext).trim())
             } catch {
               case NonFatal(e) =>
                 error(e.toString())
@@ -399,6 +425,10 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
   ): String =
     try {
 
+      val requestId = UUID.randomUUID().toString()
+
+      val tag: String = getEventHandlerTag(input).map(t => s"[$t]").getOrElse("")
+
       given lambdaEnvironment: LambdaEnvironment =
         new LambdaEnvironment(
           Map(
@@ -416,17 +446,36 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
       testLambdaEnvironment.setRelease(Some(lambdaEnvironment))
 
-      val requestId = UUID.randomUUID().toString()
-
-      val tag: String = getEventHandlerTag(input).map(t => s"[$t]").getOrElse("")
+      val applicationContext: ApplicationContext =
+        testApplicationContext
+          .accumulateAndGet(
+            None,
+            new BinaryOperator[Option[ApplicationContext]] {
+              override def apply(
+                  existing: Option[ApplicationContext],
+                  dummy: Option[ApplicationContext]
+              ): Option[ApplicationContext] =
+                existing.orElse {
+                  debug(
+                    s"$tag ${INIT}LAMBDA INIT ${AnsiColor.BOLD}${input}"
+                  )
+                  Some(configure(initialize).match {
+                    case _: Unit               => NoContext
+                    case c: ApplicationContext => c
+                  })
+                }
+            }
+          )
+          .get
 
       debug(
         s"$tag ${REQUEST}LAMBDA REQUEST ${AnsiColor.BOLD}${input}"
       )
 
-      val context = LambdaContext(requestId, Map.empty, lambdaEnvironment, switchOffDebugMode)
+      val lambdaContext =
+        LambdaContext(requestId, Map.empty, lambdaEnvironment, switchOffDebugMode)
 
-      val output = handleRequest(input)(using context)
+      val output = handleRequest(input)(using lambdaContext, applicationContext)
 
       debug(
         s"$tag ${RESPONSE}LAMBDA RESPONSE ${AnsiColor.BOLD}$output"
@@ -456,11 +505,6 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
 object LambdaRuntime {
 
-  object AnsiColor {
-    inline val REQUEST = "\u001b[38;5;205m"
-    inline val RESPONSE = "\u001b[38;5;214m"
-  }
-
   inline def durationMetric = """{"Name":"duration","Unit":"Milliseconds","StorageResolution":60}"""
 
   final def createErrorMessage(e: Throwable): String =
@@ -474,13 +518,13 @@ object LambdaRuntime {
         .takeRight(3)
         .map(_.toString())).map(s => s"\"$s\"").mkString(",")}]}"
 
-  final def withLogCapture(
+  final def withLogCapture[A](
       lambdaEnvironment: LambdaEnvironment,
       logPrefix: String,
       logSuffix: String,
       debugMode: Boolean,
-      body: => Either[String, String]
-  ): Either[String, String] = {
+      body: => A
+  ): A = {
 
     val logPrinter: PrintStream | NoAnsiColorJsonArray | NoAnsiColorJsonString | NoAnsiColorsSingleLine =
       if (debugMode) then {
