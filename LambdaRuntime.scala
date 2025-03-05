@@ -44,12 +44,12 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
   final def configure[T](f: LambdaEnvironment ?=> T): T =
     instance.getAcquire() match {
       case Some(i) =>
-        debug("Configuring lambda ...")(using i.lambdaEnvironment)
+        trace("Configuring lambda ...")(using i.lambdaEnvironment)
         f(using i.lambdaEnvironment)
       case None =>
         testLambdaEnvironment.getAcquire() match {
           case Some(le) =>
-            debug("Configuring lambda using test environment ...")(using le)
+            trace("Configuring lambda using test environment ...")(using le)
             f(using le)
           case None =>
             throw new IllegalStateException(
@@ -161,7 +161,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
             final override def start(): Instance = {
               semaphore.release()
-              debug(s"[$runtimeId] LambdaRuntime started.")
+              trace(s"[$runtimeId] LambdaRuntime started.")
               this
             }
 
@@ -170,7 +170,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
               try (loopThread.join())
               catch {
                 case e: InterruptedException =>
-                  debug(s"[$runtimeId] LambdaRuntime interrupted.")
+                  trace(s"[$runtimeId] LambdaRuntime interrupted.")
                   instance.setRelease(None)
               }
               this
@@ -178,12 +178,12 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
             final override def pause(): Instance = {
               semaphore.acquire()
-              debug(s"[$runtimeId] LambdaRuntime paused.")
+              trace(s"[$runtimeId] LambdaRuntime paused.")
               this
             }
 
             final override def shutdown(): Instance = {
-              debug(s"[$runtimeId] LambdaRuntime shutdowns.")
+              trace(s"[$runtimeId] LambdaRuntime shutdowns.")
               active.set(false)
               lambdaEnvironment.resetOut()
               Thread.sleep(100)
@@ -191,7 +191,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
               this
             }
 
-            debug(s"[$runtimeId] LambdaRuntime initialized.")
+            trace(s"[$runtimeId] LambdaRuntime initialized.")
           }
           instance.setRelease(Some(i))
           i
