@@ -7,7 +7,7 @@ on:
         type: choice
         description: 'How to bump a version?'
         required: true
-        default: 'minor'
+        default: 'patch'
         options:
           - major
           - minor
