@@ -136,24 +136,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
       .andThen { case _ => lambdaRuntime.shutdown() }
   }
 
-  test("Lambda runtime with secrets retrieval".ignore) {
-    val response = new LambdaRuntime {
-      override def handleRequest(input: String)(using
-          lambdaContext: LambdaContext
-      ): String =
-        lambdaContext.maybeGetProperty("TWILIO_HOST").getOrElse("")
-    }
-      .test(
-        "Hello!",
-        Map(
-          "LAMBDA_RUNTIME_DEBUG_MODE" -> "true",
-          "ENVIRONMENT_SECRETS" -> "arn:aws:secretsmanager:us-east-1:846345969893:secret:Development/apigateway/external-integrations/beta/variables"
-        )
-      )
-    assert(!response.isBlank(), "Expected non-empty secret value")
-  }
-
-  test("Execute TestEchoLambda with colors".ignore) {
+  test("Execute TestEchoLambda with colors".flaky) {
     val lambdaRuntime = new TestEchoLambda()
       .initializeLambdaRuntime(
         Map("LAMBDA_RUNTIME_DEBUG_MODE" -> "ON")
@@ -168,7 +151,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test(
-    "Execute TestEchoLambda without colors and with json array log format".ignore
+    "Execute TestEchoLambda without colors and with json array log format".flaky
   ) {
     val lambdaRuntime = new TestEchoLambda()
       .initializeLambdaRuntime(
@@ -184,7 +167,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test(
-    "Execute TestEchoLambda without colors and with structured json array log format".ignore
+    "Execute TestEchoLambda without colors and with structured json array log format".flaky
   ) {
     val lambdaRuntime = new TestEchoLambda()
       .initializeLambdaRuntime(
@@ -205,7 +188,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test(
-    "Execute TestEchoLambda without colors and with structured json array log format, very large log".ignore
+    "Execute TestEchoLambda without colors and with structured json array log format, very large log".flaky
   ) {
     val lambdaRuntime = new TestEchoLambda(Some("Hello! " * 100000))
       .initializeLambdaRuntime(
@@ -227,7 +210,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test(
-    "Execute TestEchoLambda without colors and with structured json array log format and json event".ignore
+    "Execute TestEchoLambda without colors and with structured json array log format and json event".flaky
   ) {
     val lambdaRuntime = new TestEchoLambda()
       .initializeLambdaRuntime(
@@ -248,7 +231,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test(
-    "Execute TestEchoLambda without colors and with json string log format".ignore
+    "Execute TestEchoLambda without colors and with json string log format".flaky
   ) {
     val lambdaRuntime = new TestEchoLambda()
       .initializeLambdaRuntime(
@@ -269,7 +252,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test(
-    "Execute TestEchoLambda without colors and with structured json string log format".ignore
+    "Execute TestEchoLambda without colors and with structured json string log format".flaky
   ) {
     val lambdaRuntime = new TestEchoLambda()
       .initializeLambdaRuntime(
@@ -290,7 +273,7 @@ class LambdaRuntimeSpec extends munit.FunSuite {
   }
 
   test(
-    "Execute TestEchoLambda without colors and without json log format".ignore
+    "Execute TestEchoLambda without colors and without json log format".flaky
   ) {
     val lambdaRuntime = new TestEchoLambda()
       .initializeLambdaRuntime(
@@ -337,16 +320,6 @@ class LambdaRuntimeSpec extends munit.FunSuite {
     jsonArrayPrintStream.out.println("-" * 16)
     jsonArrayPrintStream.close()
     println(capture.asString)
-  }
-
-  test("Eventually".ignore) {
-    var i = 0
-    Eventually.maybe(
-      if (i < 4) {
-        i = i + 1
-        throw new Exception()
-      } else i
-    )
   }
 
   override def afterAll(): Unit =

@@ -141,9 +141,9 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
                       if (active.get)
                       then
                         try {
-                          reportError(createErrorMessage(e), lambdaEnvironment.initErrorUrl)
+                          reportError(LambdaRuntime.createErrorMessage(e), lambdaEnvironment.initErrorUrl)
                         } catch {
-                          case e => error(createErrorMessage(e))
+                          case e => error(LambdaRuntime.createErrorMessage(e))
                         }
                   } finally {
                     lambdaInvocationDebugMode = lambdaEnvironment.isDebugMode
@@ -200,9 +200,9 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
           case NonFatal(e) =>
             given le: LambdaEnvironment = new LambdaEnvironment()
             try {
-              reportError(createErrorMessage(e), le.initErrorUrl)
+              reportError(LambdaRuntime.createErrorMessage(e), le.initErrorUrl)
             } catch {
-              case e => error(createErrorMessage(e))
+              case e => error(LambdaRuntime.createErrorMessage(e))
             }
             le.resetOut()
             throw e
@@ -210,7 +210,9 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
     }
   }
 
-  /** The actual lambda invocation happens here. */
+  /* ----------------------------------------------------------
+   * THE ACTUAL LAMBDA BUSINESS METHOD INVOCATION HAPPENS HERE.
+   * ---------------------------------------------------------- */
   private final def invokeHandleRequest(
       id: Int
   )(using lambdaEnvironment: LambdaEnvironment): Unit = {
@@ -265,7 +267,9 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
             .maxMemory()},"totalMemory":${Runtime
             .getRuntime()
             .totalMemory()},"freeMemory":${Runtime.getRuntime().freeMemory()}}"""
-      else s"[$id]$tag ${REQUEST}LAMBDA REQUEST ${AnsiColor.BOLD}${event.body}"
+      else {
+        s"[$id]$tag ${REQUEST}LAMBDA REQUEST ${AnsiColor.BOLD}${event.body}"
+      }
     )
 
     try {
@@ -287,78 +291,44 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
       val input = event.body
 
-      val logPrinter: PrintStream | NoAnsiColorJsonArray | NoAnsiColorJsonString | NoAnsiColorsSingleLine =
-        val logPrefix =
-          if (lambdaEnvironment.shouldLogStructuredJson)
-          then s"""{"log":"LOGS",$structuredLogIntro,"""
-          else s"[${lambdaEnvironment.getFunctionName()}] [$id]$tag LAMBDA LOGS {"
+      val logPrefix =
+        if (lambdaEnvironment.shouldLogStructuredJson)
+        then s"""{"log":"LOGS",$structuredLogIntro,"""
+        else s"[${lambdaEnvironment.getFunctionName()}] [$id]$tag LAMBDA LOGS {"
 
-        val logSuffix =
-          if (lambdaEnvironment.shouldLogStructuredJson)
-          then s""",$structuredLogEnd}"""
-          else "}"
+      val logSuffix =
+        if (lambdaEnvironment.shouldLogStructuredJson)
+        then s""",$structuredLogEnd}"""
+        else "}"
 
-        if (lambdaInvocationDebugMode) then {
-          if (lambdaEnvironment.shouldDisplayAnsiColors)
-          then LambdaEnvironment.originalOut
-          else if (lambdaEnvironment.shouldLogInJsonArrayFormat)
-          then new NoAnsiColorJsonArray(logPrefix, logSuffix, LambdaEnvironment.originalOut)
-          else if (lambdaEnvironment.shouldLogInJsonStringFormat)
-          then new NoAnsiColorJsonString(logPrefix, logSuffix, LambdaEnvironment.originalOut)
-          else new NoAnsiColorsSingleLine(logPrefix, logSuffix, LambdaEnvironment.originalOut)
-        } else NoOpPrinter.out
-
-      extension (
-          v: PrintStream | NoAnsiColorJsonArray | NoAnsiColorsSingleLine | NoAnsiColorJsonString
-      )
-        inline def out: PrintStream = v match {
-          case out: PrintStream           => out
-          case ps: NoAnsiColorJsonArray   => ps.out
-          case ps: NoAnsiColorJsonString  => ps.out
-          case ps: NoAnsiColorsSingleLine => ps.out
-        }
-        def close(): Unit = v match {
-          case out: PrintStream           => ()
-          case ps: NoAnsiColorJsonArray   => ps.close()
-          case ps: NoAnsiColorJsonString  => ps.close()
-          case ps: NoAnsiColorsSingleLine => ps.close()
-        }
-
-      val previousSystemOut = System.out
-      var isError = false
-
-      val output =
-        try {
-          System.setOut(logPrinter.out)
-          System.setErr(logPrinter.out)
-          Console.withOut(logPrinter.out) {
-            Console.withErr(logPrinter.out) {
-              try {
-                handleRequest(input)(using context).trim()
-              } catch {
-                case NonFatal(e) =>
-                  isError = true
-                  error(e.toString())
-                  val stackTrace = e
-                    .getStackTrace()
-                    .filterNot { s =>
-                      val n = s.getClassName()
-                      n.startsWith("scala") || n.startsWith("java")
-                    }
-                  if (stackTrace.size > 30) then
-                    stackTrace.take(15).foreach(println)
-                    println("...")
-                    stackTrace.takeRight(15).foreach(println)
-                  else stackTrace.foreach(println)
-                  createErrorMessage(e)
-              }
+      val result: Either[String, String] =
+        LambdaRuntime
+          .withLogCapture(
+            lambdaEnvironment,
+            logPrefix,
+            logSuffix,
+            lambdaInvocationDebugMode,
+            try {
+              Right(handleRequest(input)(using context).trim())
+            } catch {
+              case NonFatal(e) =>
+                error(e.toString())
+                val stackTrace = e
+                  .getStackTrace()
+                  .filterNot { s =>
+                    val n = s.getClassName()
+                    n.startsWith("scala") || n.startsWith("java")
+                  }
+                if (stackTrace.size > 30) then
+                  stackTrace.take(15).foreach(println)
+                  println("...")
+                  stackTrace.takeRight(15).foreach(println)
+                else stackTrace.foreach(println)
+                Left(LambdaRuntime.createErrorMessage(e))
             }
-          }
-        } finally {
-          logPrinter.close()
-          System.setOut(previousSystemOut)
-          System.setErr(previousSystemOut)
-        }
+          )
+
+      val output = result.fold(identity, identity)
 
       val isJsonReponse =
         (output.startsWith("{") && output.endsWith("}"))
@@ -375,7 +345,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
       debug(
         if (lambdaEnvironment.shouldLogStructuredJson)
         then
-          s"""{$awsEmbededMetric,"log":"RESPONSE",$structuredLogIntro,${
+          s"""{"log":"RESPONSE",$structuredLogIntro,${
               if (lambdaEnvironment.shouldLogResponseIncludeRequest)
               then
                 s""""request":${if (isJsonRequest) then event.body else s"\"${event.body.replace("\"", "\\\"")}\""},"""
@@ -390,12 +360,14 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
               .getRuntime()
               .maxMemory()},"totalMemory":${Runtime
               .getRuntime()
-              .totalMemory()},"freeMemory":${Runtime.getRuntime().freeMemory()}}"""
-        else s"[$id]$tag ${RESPONSE}LAMBDA RESPONSE [${t1 - t0}ms] ${AnsiColor.BOLD}$output"
+              .totalMemory()},"freeMemory":${Runtime.getRuntime().freeMemory()},$awsEmbededMetric,}"""
+        else {
+          s"[$id]$tag ${RESPONSE}LAMBDA RESPONSE [${t1 - t0}ms] ${AnsiColor.BOLD}$output"
+        }
       )
 
       val responseResult =
-        if (isError)
+        if (result.isLeft)
         then reportError(output, lambdaEnvironment.errorUrl(requestId))
         else
           httpClient
@@ -410,41 +382,15 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
 
     } catch {
       case NonFatal(e) =>
-        val errorMessage = createErrorMessage(e)
+        val errorMessage = LambdaRuntime.createErrorMessage(e)
         error(errorMessage)
         try {
           reportError(errorMessage, lambdaEnvironment.errorUrl(requestId))
         } catch {
-          case e => error(createErrorMessage(e))
+          case e => error(LambdaRuntime.createErrorMessage(e))
         }
     }
   }
-
-  /** Helper method to report error back to the AWS lambda host. */
-  private final inline def reportError(
-      errorMessage: String,
-      errorUrl: URI
-  )(using lambdaEnvironment: LambdaEnvironment): HttpResponse[String] =
-    httpClient
-      .send(
-        HttpRequest
-          .newBuilder(errorUrl)
-          .POST(BodyPublishers.ofString(errorMessage))
-          .setHeader("Lambda-Runtime-Function-Error-Type", "Runtime.UnknownReason")
-          .build(),
-        BodyHandlers.ofString()
-      )
-
-  private final def createErrorMessage(e: Throwable): String =
-    val stackTrace = e.getStackTrace().filterNot { s =>
-      val n = s.getClassName()
-      n.startsWith("scala") || n.startsWith("java")
-    }
-    s"{\"success\":false,\"errorMessage\":\"${e.getMessage()}\", \"error\":\"${e
-        .getClass()
-        .getName()}\", \"stackTrace\": [${(stackTrace.take(3).map(_.toString()) ++ Array("...") ++ stackTrace
-        .takeRight(3)
-        .map(_.toString())).map(s => s"\"$s\"").mkString(",")}]}"
 
   // Lambda invocation for unit test purposes, does not interact with the AWS host, returns result directly. */
   final def test(
@@ -489,8 +435,23 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
       output
     } catch {
       case NonFatal(e) =>
-        createErrorMessage(e)
+        LambdaRuntime.createErrorMessage(e)
     }
+
+    /** Report error back to the AWS lambda host. */
+  final inline def reportError(
+      errorMessage: String,
+      errorUrl: URI
+  )(using lambdaEnvironment: LambdaEnvironment): HttpResponse[String] =
+    httpClient
+      .send(
+        HttpRequest
+          .newBuilder(errorUrl)
+          .POST(BodyPublishers.ofString(errorMessage))
+          .setHeader("Lambda-Runtime-Function-Error-Type", "Runtime.UnknownReason")
+          .build(),
+        BodyHandlers.ofString()
+      )
 }
 
 object LambdaRuntime {
@@ -501,4 +462,69 @@ object LambdaRuntime {
   }
 
   inline def durationMetric = """{"Name":"duration","Unit":"Milliseconds","StorageResolution":60}"""
+
+  final def createErrorMessage(e: Throwable): String =
+    val stackTrace = e.getStackTrace().filterNot { s =>
+      val n = s.getClassName()
+      n.startsWith("scala") || n.startsWith("java")
+    }
+    s"{\"success\":false,\"errorMessage\":\"${e.getMessage()}\", \"error\":\"${e
+        .getClass()
+        .getName()}\", \"stackTrace\": [${(stackTrace.take(3).map(_.toString()) ++ Array("...") ++ stackTrace
+        .takeRight(3)
+        .map(_.toString())).map(s => s"\"$s\"").mkString(",")}]}"
+
+  final def withLogCapture(
+      lambdaEnvironment: LambdaEnvironment,
+      logPrefix: String,
+      logSuffix: String,
+      debugMode: Boolean,
+      body: => Either[String, String]
+  ): Either[String, String] = {
+
+    val logPrinter: PrintStream | NoAnsiColorJsonArray | NoAnsiColorJsonString | NoAnsiColorsSingleLine =
+      if (debugMode) then {
+        if (lambdaEnvironment.shouldDisplayAnsiColors)
+        then LambdaEnvironment.originalOut
+        else if (lambdaEnvironment.shouldLogInJsonArrayFormat)
+        then new NoAnsiColorJsonArray(logPrefix, logSuffix, LambdaEnvironment.originalOut)
+        else if (lambdaEnvironment.shouldLogInJsonStringFormat)
+        then new NoAnsiColorJsonString(logPrefix, logSuffix, LambdaEnvironment.originalOut)
+        else new NoAnsiColorsSingleLine(logPrefix, logSuffix, LambdaEnvironment.originalOut)
+      } else NoOpPrinter.out
+
+    extension (
+        v: PrintStream | NoAnsiColorJsonArray | NoAnsiColorsSingleLine | NoAnsiColorJsonString
+    )
+      inline def out: PrintStream = v match {
+        case out: PrintStream           => out
+        case ps: NoAnsiColorJsonArray   => ps.out
+        case ps: NoAnsiColorJsonString  => ps.out
+        case ps: NoAnsiColorsSingleLine => ps.out
+      }
+
+      inline def close(): Unit = v match {
+        case out: PrintStream           => ()
+        case ps: NoAnsiColorJsonArray   => ps.close()
+        case ps: NoAnsiColorJsonString  => ps.close()
+        case ps: NoAnsiColorsSingleLine => ps.close()
+      }
+
+    val previousSystemOut = System.out
+    var isError = false
+
+    try {
+      System.setOut(logPrinter.out)
+      System.setErr(logPrinter.out)
+      Console.withOut(logPrinter.out) {
+        Console.withErr(logPrinter.out) {
+          body
+        }
+      }
+    } finally {
+      logPrinter.close()
+      System.setOut(previousSystemOut)
+      System.setErr(previousSystemOut)
+    }
+  }
 }
