@@ -20,6 +20,7 @@ jobs:
         with:
           jvm: adoptium:1.21
           apps: scala
+          power: true
       - name: Run tests
         run: scala test .
 
