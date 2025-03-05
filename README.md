@@ -1,3 +1,5 @@
+![Maven Central Version](https://img.shields.io/maven-central/v/org.encalmo/scala-aws-lambda-runtime_3?style=for-the-badge&link=https%3A%2F%2Fcentral.sonatype.com%2Fartifact%2Forg.encalmo%2Fscala-aws-lambda-runtime_3)
+
 # scala-aws-lambda-runtime
 
 This Scala3 library provides a custom [AWS Lambda](https://aws.amazon.com/pm/lambda) runtime for building functions using Scala3.
