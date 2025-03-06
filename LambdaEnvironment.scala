@@ -83,7 +83,7 @@ final class LambdaEnvironment(
   final val shouldLogInJsonArrayFormat: Boolean =
     maybeGetProperty("LAMBDA_RUNTIME_LOG_FORMAT")
       .map(_.toUpperCase().contains("JSON_ARRAY"))
-      .getOrElse(false)
+      .getOrElse(true)
 
   final val shouldLogInJsonStringFormat: Boolean =
     maybeGetProperty("LAMBDA_RUNTIME_LOG_FORMAT")

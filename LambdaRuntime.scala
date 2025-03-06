@@ -356,13 +356,13 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
             }
           )
 
+      val t1 = System.currentTimeMillis()
+
       val output = result.fold(identity, identity)
 
       val isJsonReponse =
         (output.startsWith("{") && output.endsWith("}"))
           || (output.startsWith("[") && output.endsWith("]"))
-
-      val t1 = System.currentTimeMillis()
 
       // https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html
       val awsEmbededMetric =
@@ -388,7 +388,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
               .getRuntime()
               .maxMemory()},"totalMemory":${Runtime
               .getRuntime()
-              .totalMemory()},"freeMemory":${Runtime.getRuntime().freeMemory()},$awsEmbededMetric,}"""
+              .totalMemory()},"freeMemory":${Runtime.getRuntime().freeMemory()},$awsEmbededMetric}"""
         else {
           s"[$id]$tag ${RESPONSE}LAMBDA RESPONSE [${t1 - t0}ms] ${AnsiColor.BOLD}$output"
         }
