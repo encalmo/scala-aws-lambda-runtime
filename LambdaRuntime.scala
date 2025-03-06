@@ -129,12 +129,12 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
             val logPrefix =
               if (lambdaEnvironment.shouldLogStructuredJson)
               then s"""{"log":"INIT","lambda":"${lambdaEnvironment.getFunctionName()}","""
-              else s"[${lambdaEnvironment.getFunctionName()}] LAMBDA INIT {"
+              else s"[${lambdaEnvironment.getFunctionName()}] LAMBDA INIT "
 
             val logSuffix =
               if (lambdaEnvironment.shouldLogStructuredJson)
               then s""","lambdaVersion":"${lambdaEnvironment.getFunctionVersion()}"}"""
-              else "}"
+              else ""
 
             lazy val applicationContext: ApplicationContext =
               LambdaRuntime
@@ -458,9 +458,6 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
                   dummy: Option[ApplicationContext]
               ): Option[ApplicationContext] =
                 existing.orElse {
-                  debug(
-                    s"$tag ${INIT}LAMBDA INIT ${AnsiColor.BOLD}${input}"
-                  )
                   Some(configure(initialize))
                 }
             }
