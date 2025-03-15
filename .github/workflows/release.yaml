@@ -20,8 +20,16 @@ on:
 
 jobs:
   ReleasePackage:
-    uses: ./.github/workflows/buildAndPublishPackage.yaml
-    secrets: inherit
-    with:
-      tag-prefix: 'lambda-runtime'
-      version-bump: ${{ inputs.version-bump || 'patch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - id: release
+        name: Create and upload new release bundles
+        uses: encalmo/create-new-release-action@v1.1
+        with:
+          tag-prefix: 'lambda-runtime'
+          version-bump: ${{ inputs.version-bump || 'patch' }}
+          release-flags: '--native --js'
+          github-token:  ${{ secrets.GITHUB_TOKEN }}
+          sonatype-token: ${{ secrets.SONATYPE_TOKEN }}
+          gpg-secret-key-base64: ${{ secrets.GPG_SECRET_KEY }}
+          gpg-secret-key-id: ${{ secrets.GPG_SECRET_KEY_ID }}
