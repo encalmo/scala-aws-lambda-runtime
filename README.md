@@ -11,8 +11,7 @@ See:
 
 ## Dependencies
 
-- JVM 21
-- Scala 3.3.5
+- Scala >= 3.3.5
 
 ## Usage
 
