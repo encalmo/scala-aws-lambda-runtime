@@ -1,22 +1,11 @@
-name: Release new version to Sonatype Central
+name: Publish documentation to Github Pages
 
 on:
   workflow_dispatch:
-    inputs: 
-      version-bump:
-        type: choice
-        description: 'How to bump a version?'
-        required: true
-        default: 'patch'
-        options:
-          - major
-          - minor
-          - patch
-          - keep
-  # push:
-  #   branches: [main]
-  #   paths:
-  #     - '*.scala'   
+  push:
+    branches: [main]
+    paths:
+      - '*.md'   
   
 permissions:
   id-token: write # This is required for requesting the JWT
@@ -24,20 +13,20 @@ permissions:
   pages: write    # to deploy to Pages
 
 jobs:
-  ReleasePackage:
+  PublishGithubPages:
     runs-on: ubuntu-latest
     steps:
       - id: release
-        name: Create and upload new release bundles
+        name: Create and upload new Github Pages content
         uses: encalmo/create-new-release-action@v1.2
         with:
           tag-prefix: 'version'
-          version-bump: ${{ inputs.version-bump || 'patch' }}
-          release-flags: '--native --js'
+          version-bump: 'keep'
+          release-flags: ''
           github-token:  ${{ secrets.GITHUB_TOKEN }}
           sonatype-token: ${{ secrets.SONATYPE_TOKEN }}
           gpg-secret-key-base64: ${{ secrets.GPG_SECRET_KEY }}
           gpg-secret-key-id: ${{ secrets.GPG_SECRET_KEY_ID }}
-          pages-only: 'false'
+          pages-only: 'true'
           markdown-paths: 'README.md'
           
