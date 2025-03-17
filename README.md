@@ -26,4 +26,4 @@ or with SCALA-CLI
 
 ## Examples
 
-See an example lambda implemented in [TestEchoLambda](TestEchoLambda.scala)
+See an example lambda implemented in [TestEchoLambda](https://github.com/encalmo/scala-aws-lambda-runtime/blob/main/TestEchoLambda.scala) and in [scala-aws-lambda-example](https://github.com/encalmo/scala-aws-lambda-example)
