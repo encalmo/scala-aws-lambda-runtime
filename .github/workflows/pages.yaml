@@ -18,7 +18,7 @@ jobs:
     steps:
       - id: release
         name: Create and upload new Github Pages content
-        uses: encalmo/create-new-release-action@v1.3
+        uses: encalmo/create-new-release-action@v1.4.0
         with:
           tag-prefix: 'version'
           version-bump: 'keep'
