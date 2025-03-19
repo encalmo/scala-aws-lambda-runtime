@@ -384,7 +384,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
               else ""
             }$structuredLogEnd,"timestamp":"${t1}","datetime":"${ZonedDateTime
               .now(ZoneUTC)
-              .toString()}","duration":"${t1 - t0}","maxMemory":${Runtime
+              .toString()}","duration":${t1 - t0},"maxMemory":${Runtime
               .getRuntime()
               .maxMemory()},"totalMemory":${Runtime
               .getRuntime()
