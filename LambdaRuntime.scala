@@ -367,7 +367,7 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
       // https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CloudWatch_Embedded_Metric_Format_Specification.html
       val awsEmbededMetric =
         s""""_aws":{"Timestamp":$t1,"CloudWatchMetrics":[{"Namespace":"lambda-${functionName}-metrics","Dimensions":[${
-            if (tagOpt.isDefined) then "[\"handler\"]" else "[]"
+            if (tagOpt.isDefined) then "[\"handler\",\"lambdaVersion\"]" else "[\"lambdaVersion\"]"
           }],"Metrics":[${LambdaRuntime.durationMetric}]}]}"""
 
       debug(

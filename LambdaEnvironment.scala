@@ -41,49 +41,67 @@ final class LambdaEnvironment(
       .orElse(systemVariables.get(key))
   )
 
+  /** The host and port of the runtime API. */
   private def getRuntimeApi(): String =
     getProperty("AWS_LAMBDA_RUNTIME_API")
 
+  /** The name of the function. */
   final def getFunctionName(): String =
     getProperty("AWS_LAMBDA_FUNCTION_NAME")
 
+  /** The version of the function being executed. */
   final def getFunctionVersion(): String =
     getProperty("AWS_LAMBDA_FUNCTION_VERSION")
 
+  /** The amount of memory available to the function in MB. */
   final def getMemoryLimitInMB(): Int =
     getProperty("AWS_LAMBDA_FUNCTION_MEMORY_SIZE").toInt
 
+  /** The name of the Amazon CloudWatch Logs group for the function. */
   final def getLogGroupName(): String =
     getProperty("AWS_LAMBDA_LOG_GROUP_NAME")
 
+  /** The name of the Amazon CloudWatch Logs stream for the function. */
   final def getLogStreamName(): String =
     getProperty("AWS_LAMBDA_LOG_STREAM_NAME")
+
+  /** The path to your Lambda function code. */
+  final def getLambdaRuntimeDir(): String =
+    getProperty("LAMBDA_RUNTIME_DIR")
+
+  /** The path to runtime libraries. */
+  final def getLambdaTaskRoot(): String =
+    getProperty("LAMBDA_TASK_ROOT")
+
+  /** Returns true when runs deployed to AWS Lambda */
+  final val isHostedAwsEnvironment: Boolean =
+    maybeGetProperty("_HANDLER").isDefined
 
   final val isDebugMode: Boolean =
     maybeGetProperty("LAMBDA_RUNTIME_DEBUG_MODE")
       .map(parseBooleanFlagDefaultOff)
-      .getOrElse(false)
+      .getOrElse(true)
 
   final val isTraceMode: Boolean =
     maybeGetProperty("LAMBDA_RUNTIME_TRACE_MODE")
       .map(parseBooleanFlagDefaultOff)
-      .getOrElse(false)
+      .getOrElse(!isHostedAwsEnvironment)
 
   final val shouldDisplayAnsiColors: Boolean =
     maybeGetProperty("ANSI_COLORS_MODE")
-      .map(parseBooleanFlagDefaultOn)
+      .map(parseBooleanFlagDefault(!isHostedAwsEnvironment))
       .getOrElse(maybeGetProperty("NO_COLOR").forall(p => p.trim() != "1"))
 
   final val shouldLogStructuredJson: Boolean =
     !shouldDisplayAnsiColors &&
       maybeGetProperty("LAMBDA_RUNTIME_LOG_TYPE")
         .map(_.toUpperCase().contains("STRUCTURED"))
-        .getOrElse(true)
+        .getOrElse(isHostedAwsEnvironment)
 
   final val shouldLogInJsonArrayFormat: Boolean =
     maybeGetProperty("LAMBDA_RUNTIME_LOG_FORMAT")
       .map(_.toUpperCase().contains("JSON_ARRAY"))
-      .getOrElse(true)
+      .getOrElse(isHostedAwsEnvironment)
 
   final val shouldLogInJsonStringFormat: Boolean =
     maybeGetProperty("LAMBDA_RUNTIME_LOG_FORMAT")
@@ -156,17 +174,24 @@ final class LambdaEnvironment(
     )
 
   final inline def parseBooleanFlagDefaultOff: String => Boolean = s =>
-    s.toLowerCase() match {
+    s.trim().toLowerCase() match {
       case "true" => true
       case "on"   => true
       case _      => false
     }
 
   final inline def parseBooleanFlagDefaultOn: String => Boolean = s =>
-    s.toLowerCase() match {
+    s.trim().toLowerCase() match {
       case "false" => false
       case "off"   => false
       case _       => true
+    }
+
+  final inline def parseBooleanFlagDefault(default: Boolean): String => Boolean = s =>
+    s.trim().toLowerCase() match {
+      case "false" => false
+      case "off"   => false
+      case _       => default
     }
 }
 
