@@ -31,7 +31,7 @@ jobs:
         name: Create and upload new release bundles
         uses: encalmo/create-new-release-action@v1.4.0
         with:
-          tag-prefix: 'version'
+          tag-prefix: 'lambda-runtime'
           version-bump: ${{ inputs.version-bump || 'patch' }}
           release-flags: '--native --js'
           github-token:  ${{ secrets.GITHUB_TOKEN }}
