@@ -8,6 +8,10 @@ import java.io.PrintStream
 import java.util.HexFormat
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.AnsiColor
+import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.LambdaLogger
+import com.amazonaws.services.lambda.runtime.CognitoIdentity
+import com.amazonaws.services.lambda.runtime.ClientContext
 
 class LambdaRuntimeSpec extends munit.FunSuite {
 
@@ -99,6 +103,55 @@ class LambdaRuntimeSpec extends munit.FunSuite {
         lambdaRuntime.test(event)
       },
       """{"body":"X-!olleH","statusCode":200,"headers":{},"isBase64Encoded":false}"""
+    )
+  }
+
+  test("Lambda runtime test execution using java handler interface") {
+    val lambdaRuntime = new LambdaRuntime {
+
+      type ApplicationContext = MyContext
+
+      override def initialize(using environment: LambdaEnvironment) = {
+        environment.info(
+          s"Initializing test echo lambda ${environment.getFunctionName()} ..."
+        )
+        MyContext(foo = "bar")
+      }
+
+      override def handleRequest(input: String)(using LambdaContext, MyContext): String =
+        input.reverse
+    }
+
+    assertEquals(
+      lambdaRuntime.handleRequest(
+        "Hello!",
+        new Context {
+
+          override def getAwsRequestId(): String = "foo-123"
+
+          override def getRemainingTimeInMillis(): Int = ???
+
+          override def getClientContext(): ClientContext = ???
+
+          override def getIdentity(): CognitoIdentity = ???
+
+          override def getFunctionName(): String = ???
+
+          override def getLogStreamName(): String = ???
+
+          override def getFunctionVersion(): String = ???
+
+          override def getLogger(): LambdaLogger = ???
+
+          override def getInvokedFunctionArn(): String = ???
+
+          override def getLogGroupName(): String = ???
+
+          override def getMemoryLimitInMB(): Int = ???
+
+        }
+      ),
+      "!olleH"
     )
   }
 

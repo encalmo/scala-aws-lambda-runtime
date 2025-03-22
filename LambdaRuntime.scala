@@ -30,7 +30,10 @@ trait SimpleLambdaRuntime extends LambdaRuntime {
 
 /** Custom lambda runtime base. (https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html)
   */
-trait LambdaRuntime extends EventHandler, EventHandlerTag {
+trait LambdaRuntime
+    extends EventHandler,
+      EventHandlerTag,
+      com.amazonaws.services.lambda.runtime.RequestHandler[String, String] {
 
   import LambdaEnvironment.Logger.*
 
@@ -497,6 +500,24 @@ trait LambdaRuntime extends EventHandler, EventHandlerTag {
           .build(),
         BodyHandlers.ofString()
       )
+
+  private lazy val javaHandlerInitialize: (LambdaEnvironment, ApplicationContext) = {
+    given lambdaEnvironment: LambdaEnvironment = new LambdaEnvironment()
+    val applicationContext = initialize(using lambdaEnvironment)
+    (lambdaEnvironment, applicationContext)
+  }
+
+  /** Java handler interface */
+  final override def handleRequest(input: String, context: com.amazonaws.services.lambda.runtime.Context): String = {
+    val (lambdaEnvironment, applicationContext) = javaHandlerInitialize
+    val lambdaContext = LambdaContext(
+      context.getAwsRequestId(),
+      Map.empty,
+      lambdaEnvironment,
+      switchOffDebugMode
+    )
+    handleRequest(input)(using lambdaContext, applicationContext).trim()
+  }
 }
 
 object LambdaRuntime {
