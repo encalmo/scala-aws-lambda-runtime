@@ -11,18 +11,18 @@ See:
 
 ## Dependencies
 
-   - [Scala](https://www.scala-lang.org/) >= 3.3.5
+   - [Scala](https://www.scala-lang.org) >= 3.3.5
    - com.amazonaws [**aws-lambda-java-core** 1.2.3](https://central.sonatype.com/artifact/com.amazonaws/aws-lambda-java-core)
 
 ## Usage
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "scala-aws-lambda-runtime" % "0.9.9"
+    libraryDependencies += "org.encalmo" %% "scala-aws-lambda-runtime" % "0.9.10"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::scala-aws-lambda-runtime:0.9.9
+    //> using dep org.encalmo::scala-aws-lambda-runtime:0.9.10
 
 ## API
 
