@@ -1,20 +1,19 @@
 package org.encalmo.lambda
 
+import com.amazonaws.services.lambda.runtime.ClientContext
+import com.amazonaws.services.lambda.runtime.CognitoIdentity
+import com.amazonaws.services.lambda.runtime.Context
+import com.amazonaws.services.lambda.runtime.LambdaLogger
 import org.encalmo.utils.JsonUtils.*
 import upickle.default.*
 
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
+import java.nio.charset.StandardCharsets
 import java.util.HexFormat
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.io.AnsiColor
-import com.amazonaws.services.lambda.runtime.Context
-import com.amazonaws.services.lambda.runtime.LambdaLogger
-import com.amazonaws.services.lambda.runtime.CognitoIdentity
-import com.amazonaws.services.lambda.runtime.ClientContext
-import java.io.StringBufferInputStream
-import java.nio.charset.StandardCharsets
-import java.io.ByteArrayInputStream
 
 class LambdaRuntimeSpec extends munit.FunSuite {
 
