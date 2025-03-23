@@ -12,6 +12,9 @@ import com.amazonaws.services.lambda.runtime.Context
 import com.amazonaws.services.lambda.runtime.LambdaLogger
 import com.amazonaws.services.lambda.runtime.CognitoIdentity
 import com.amazonaws.services.lambda.runtime.ClientContext
+import java.io.StringBufferInputStream
+import java.nio.charset.StandardCharsets
+import java.io.ByteArrayInputStream
 
 class LambdaRuntimeSpec extends munit.FunSuite {
 
@@ -122,37 +125,39 @@ class LambdaRuntimeSpec extends munit.FunSuite {
         input.reverse
     }
 
-    assertEquals(
-      lambdaRuntime.handleRequest(
-        "Hello!",
-        new Context {
+    val outputStream = new ByteArrayOutputStream()
 
-          override def getAwsRequestId(): String = "foo-123"
+    lambdaRuntime.handleRequest(
+      new ByteArrayInputStream("Hello!".getBytes(StandardCharsets.UTF_8)),
+      outputStream,
+      new Context {
 
-          override def getRemainingTimeInMillis(): Int = ???
+        override def getAwsRequestId(): String = "foo-123"
 
-          override def getClientContext(): ClientContext = ???
+        override def getRemainingTimeInMillis(): Int = ???
 
-          override def getIdentity(): CognitoIdentity = ???
+        override def getClientContext(): ClientContext = ???
 
-          override def getFunctionName(): String = ???
+        override def getIdentity(): CognitoIdentity = ???
 
-          override def getLogStreamName(): String = ???
+        override def getFunctionName(): String = ???
 
-          override def getFunctionVersion(): String = ???
+        override def getLogStreamName(): String = ???
 
-          override def getLogger(): LambdaLogger = ???
+        override def getFunctionVersion(): String = ???
 
-          override def getInvokedFunctionArn(): String = ???
+        override def getLogger(): LambdaLogger = ???
 
-          override def getLogGroupName(): String = ???
+        override def getInvokedFunctionArn(): String = ???
 
-          override def getMemoryLimitInMB(): Int = ???
+        override def getLogGroupName(): String = ???
 
-        }
-      ),
-      "!olleH"
+        override def getMemoryLimitInMB(): Int = ???
+
+      }
     )
+
+    assertEquals(outputStream.toString(StandardCharsets.UTF_8), "!olleH")
   }
 
   test("Lambda runtime execution when lambda is failing") {

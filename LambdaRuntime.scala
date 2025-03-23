@@ -21,6 +21,9 @@ import scala.jdk.CollectionConverters.*
 import scala.jdk.OptionConverters.*
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
+import java.io.InputStream
+import java.io.OutputStream
+import java.nio.charset.StandardCharsets
 
 /** Simplified lambda runtime when no application context is required. */
 trait SimpleLambdaRuntime extends LambdaRuntime {
@@ -30,10 +33,7 @@ trait SimpleLambdaRuntime extends LambdaRuntime {
 
 /** Custom lambda runtime base. (https://docs.aws.amazon.com/lambda/latest/dg/runtimes-custom.html)
   */
-trait LambdaRuntime
-    extends EventHandler,
-      EventHandlerTag,
-      com.amazonaws.services.lambda.runtime.RequestHandler[String, String] {
+trait LambdaRuntime extends EventHandler, EventHandlerTag, com.amazonaws.services.lambda.runtime.RequestStreamHandler {
 
   import LambdaEnvironment.Logger.*
 
@@ -507,8 +507,12 @@ trait LambdaRuntime
     (lambdaEnvironment, applicationContext)
   }
 
-  /** Java handler interface */
-  final override def handleRequest(input: String, context: com.amazonaws.services.lambda.runtime.Context): String = {
+  /** [[com.amazonaws.services.lambda.runtime.RequestStreamHandler]] implementation for Java Runtime integration */
+  final override def handleRequest(
+      inputStream: InputStream,
+      outputStream: OutputStream,
+      context: com.amazonaws.services.lambda.runtime.Context
+  ): Unit = {
     val (lambdaEnvironment, applicationContext) = javaHandlerInitialize
     val lambdaContext = LambdaContext(
       context.getAwsRequestId(),
@@ -516,7 +520,10 @@ trait LambdaRuntime
       lambdaEnvironment,
       switchOffDebugMode
     )
-    handleRequest(input)(using lambdaContext, applicationContext).trim()
+    val bytes = inputStream.readAllBytes()
+    val input = new String(bytes, StandardCharsets.UTF_8)
+    val output = handleRequest(input)(using lambdaContext, applicationContext).trim()
+    outputStream.write(output.getBytes(StandardCharsets.UTF_8))
   }
 }
 
