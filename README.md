@@ -18,11 +18,11 @@ See:
 
 Use with SBT
 
-    libraryDependencies += "org.encalmo" %% "scala-aws-lambda-runtime" % "0.9.10"
+    libraryDependencies += "org.encalmo" %% "scala-aws-lambda-runtime" % "0.9.11"
 
 or with SCALA-CLI
 
-    //> using dep org.encalmo::scala-aws-lambda-runtime:0.9.10
+    //> using dep org.encalmo::scala-aws-lambda-runtime:0.9.11
 
 ## API
 
