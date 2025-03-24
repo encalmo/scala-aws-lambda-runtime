@@ -11,6 +11,23 @@ Read more about AWS Lambda:
 
 ## Table of contents
 
+- [Dependencies](#dependencies)
+- [Usage](#usage)
+- [Handler API](#handler-api)
+   - [initialize](#initialize)
+   - [handleRequest](#handlerequest)
+   - [ApplicationContext](#applicationcontext)
+   - [LambdaContext](#lambdacontext)
+   - [LambdaEnvironment](#lambdaenvironment)
+- [Main method](#main-method)
+- [Custom runtime lifecycle](#custom-runtime-lifecycle)
+- [Lambda template g8](#lambda-template-g8)
+- [Examples](#examples)
+   - [The simplest lambda example](#the-simplest-lambda-example)
+   - [Example of lambda with initialized ApplicationContext](#example-of-lambda-with-initialized-applicationcontext)
+   - [Example of a lambda with AwsClient setup and reading of managed secrets](#example-of-a-lambda-with-awsclient-setup-and-reading-of-managed-secrets)
+- [Project content](#project-content)
+
 ## Dependencies
 
    - [Scala](https://www.scala-lang.org) >= 3.3.5
