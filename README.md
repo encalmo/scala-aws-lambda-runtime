@@ -95,7 +95,7 @@ The contract for lambda handler is defined in the [EventHandler](https://github.
 
 ## Main method
 
-Each lambda is compiled into a standalone application binary using GraalVM. The entrty point is a main method defined on the lamda's companion object, like 
+Each lambda is compiled into a standalone application binary using GraalVM. The entry point is a main method defined on the lambda's companion object, e.g. 
 
 ```scala
 object ExampleLambda {
@@ -103,7 +103,7 @@ object ExampleLambda {
 }
 ```
 
-The name of the main class must be declared in your build for graalvm to work properly, e.g.:
+The name of the main class must be declared in your build for graalvm to work properly, e.g.
 ```
 //> using mainClass org.encalmo.lambda.example.ExampleLambda
 ```
