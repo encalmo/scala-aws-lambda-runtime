@@ -9,7 +9,7 @@ Read more about AWS Lambda:
 - https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
 - https://docs.aws.amazon.com/lambda/latest/dg/runtimes-walkthrough.html
 
-## Table of content
+## Table of contents
 
 - [Dependecies](#dependencies)
 - [Usage](#usage)
