@@ -11,11 +11,6 @@ Read more about AWS Lambda:
 
 ## Table of contents
 
-- [Dependecies](#dependencies)
-- [Usage](#usage)
-- [Handler API](#handler-api)
-   - [initialize](#initialize)
-
 ## Dependencies
 
    - [Scala](https://www.scala-lang.org) >= 3.3.5
