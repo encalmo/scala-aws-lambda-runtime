@@ -304,7 +304,6 @@ class ExampleLambda2(maybeAwsClient: Option[AwsClient]) extends LambdaRuntime {
 ├── Loggers.scala
 ├── project.scala
 ├── README.md
-├── scala-aws-lambda-runtime_3-0.9.11.zip
 ├── test.sh
 └── TestEchoLambda.scala
 ```
