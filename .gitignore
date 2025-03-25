@@ -3,3 +3,4 @@
 .metals/
 .vscode/
 _site/
+*.zip
