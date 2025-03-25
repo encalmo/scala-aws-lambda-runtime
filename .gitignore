@@ -2,3 +2,4 @@
 .scala-build/
 .metals/
 .vscode/
+_site/
