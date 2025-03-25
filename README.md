@@ -282,3 +282,4 @@ class ExampleLambda2(maybeAwsClient: Option[AwsClient]) extends LambdaRuntime {
 ```
 
 ## Project content
+
