@@ -152,7 +152,146 @@ where:
 - `awsAccountId` - required for Github Actions and tests config
 - `awsRegion` - required for Github Actions and tests config
 
-## Examples
+## Lambda deployment
+
+Deployment of the lambda function using custom runtime requires the following steps:
+
+- compilation by GraalVM to produce `bootstrap` executable,
+- packaging into a ZIP archive,
+- [uploading the package into AWS Lambda either manually or using the Lambda API](https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-zip.html)
+
+The example **Github Action** to automate those steps is included in the g8 template, and in the lambda examples. See [buildAndDeployLambda.yaml](https://github.com/encalmo/scala-aws-lambda-example/blob/main/.github/workflows/buildAndDeployLambda.yaml).
+
+Action does the following steps:
+
+- setup scala environment
+- setup AWS credentials, requires a role with a github identity provider trust setup
+- execute one of two possible scripts depending on the runtime choice, either
+   - [buildAndDeployLambdaNativePackage.sh](https://github.com/encalmo/scala-aws-lambda-example/blob/main/scripts/buildAndDeployLambdaNativePackage.sh)
+   - or [buildAndDeployLambdaAssembly.sh](https://github.com/encalmo/scala-aws-lambda-example/blob/main/scripts/buildAndDeployLambdaAssembly.sh)
+- build deployment package, either `function.zip` or `assembly.jar`
+- deploy the package with the help of [deployLambda.sc](https://github.com/encalmo/scala-aws-lambda-example/blob/main/scripts/deployLambda.sc) script.
+
+## Java21 runtime compatibility
+
+Custom runtime implements additionally [`RequestStreamHandler`](https://docs.aws.amazon.com/lambda/latest/dg/java-handler.html) interface from AWS Lambda SDK to make it possible to deploy packaged fatjar using a standard `java21` runtime, without graalvm precompilation.
+
+## Logging
+
+Custom runtime provides built-in support for making your logging experience both simple and modern. All the system output produced during the invocation of your function can be captured and nicely formatted in a CloudWatch friendly JSON format. Each invocation of the function will result in only three log entries:
+
+`REQUEST` entry consists of an input `request` field and the lambda execution metadata where `id` is a simple counter of same-environment invocations.
+```json
+{
+    "log": "REQUEST",
+    "lambda": "ExampleLambda",
+    "id": 4,
+    "request": "\"Scalar 2025\"",
+    "lambdaVersion": "$LATEST",
+    "lambdaRequestId": "ba2fdf26-c84e-46fb-8ece-7568362ffd83",
+    "timestamp": "1743000856266",
+    "datetime": "2025-03-26T14:54:16.266789Z[UTC]",
+    "maxMemory": 67108864,
+    "totalMemory": 67108864,
+    "freeMemory": 64487424
+}
+```
+`LOGS` entry contains an array of all system ouput lines produced during single function invocation:
+```json
+{
+    "log": "LOGS",
+    "lambda": "ExampleLambda",
+    "id": 4,
+    "logs": [
+        "+000000: Sending greeting: Hello \"Scalar 2025\"!",
+        "+000027: How are you doing today?"
+    ],
+    "lambdaVersion": "$LATEST",
+    "lambdaRequestId": "ba2fdf26-c84e-46fb-8ece-7568362ffd83"
+}
+```
+`RESPONSE` entry consists of an output `response` field, optionally repeated `request` field, lambda execution metadata and embeded metrics (e.g. duration).
+```json
+{
+    "log": "RESPONSE",
+    "lambda": "ExampleLambda",
+    "id": 4,
+    "request": "\"Scalar 2025\"",
+    "response": {
+        "message": "Hello \"Scalar 2025\"!"
+    },
+    "lambdaVersion": "$LATEST",
+    "lambdaRequestId": "ba2fdf26-c84e-46fb-8ece-7568362ffd83",
+    "timestamp": "1743000856304",
+    "datetime": "2025-03-26T14:54:16.304103Z[UTC]",
+    "duration": 38,
+    "maxMemory": 67108864,
+    "totalMemory": 67108864,
+    "freeMemory": 64487424,
+    "_aws": {
+        "Timestamp": 1743000856304,
+        "CloudWatchMetrics": [
+            {
+                "Namespace": "lambda-ExampleLambda-metrics",
+                "Dimensions": [
+                    [
+                        "lambdaVersion"
+                    ]
+                ],
+                "Metrics": [
+                    {
+                        "Name": "duration",
+                        "Unit": "Milliseconds",
+                        "StorageResolution": 60
+                    }
+                ]
+            }
+        ]
+    }
+}
+```
+
+Logging support is configured via environment variables:
+|key|values|description
+|---|---|---
+|LAMBDA_RUNTIME_DEBUG_MODE|`ON` or `OFF`|enables logging of request, response and invocation log
+|LAMBDA_RUNTIME_TRACE_MODE|`ON` or `OFF`|enables logging of runtime internal events
+|ANSI_COLORS_MODE|`ON` or `OFF`|whether to filter out or not ansi color sequences
+|LAMBDA_RUNTIME_LOG_TYPE|`STRUCTURED` or `PLAIN`|whether to output log events as JSON or plain text
+|LAMBDA_RUNTIME_LOG_FORMAT|`JSON_ARRAY` or `JSON_STRING`| whether to combine log events between request and response as an array of strings or a single string.
+|LAMBDA_RUNTIME_LOG_RESPONSE_INCLUDE_REQUEST|`ON` or `OFF`| when `ON` request input will be logged two times, first as a REQUEST event, then again repeated in a RESPONSE event in order to facilitate CloudWatch query filtering on both input and output fields at the same time.
+
+## Testing
+
+Custom runtime supports unit testing out-of the box via dedicated method, reducing the need for an HTTP server-client setup:
+```scala
+def test(input: String, overrides: Map[String, String] = Map.empty): String
+```
+where `overrides` is a map of environment variables overrides.
+
+Unit testing your function can be as easy as writing:
+```scala
+val output = myFunction().test(input = "Hello!")
+```
+
+## Running custom runtime locally
+
+In case you want to invoke your function manually in a local environment, it is possible to start your function via a simple AWS Lambda execution environment simulator implemented in [scala-aws-lambda-local-host](https://github.com/encalmo/scala-aws-lambda-local-host).
+
+Run:
+```sh
+scala run --dependency=org.encalmo::scala-aws-lambda-local-host:0.9.1 \
+    --main-class org.encalmo.lambda.host.LocalLambdaHost \
+    -- \
+    --mode=browser \
+    --lambda-script="scala run --main-class org.encalmo.lambda.example.ExampleLambda2 ." \
+    --lambda-name=ExampleLambda
+```
+where:
+- `lambda-script` is a command to start your function.
+- `mode` can be either `browser` or `terminal`
+
+## Lambda examples
 
 See an example lambda implemented in [TestEchoLambda](https://github.com/encalmo/scala-aws-lambda-runtime/blob/main/TestEchoLambda.scala).
 
