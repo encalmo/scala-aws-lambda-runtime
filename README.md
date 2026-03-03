@@ -25,6 +25,7 @@ Read more about AWS Lambda:
 - [Lambda deployment](#lambda-deployment)
 - [Java21 runtime compatibility](#java21-runtime-compatibility)
 - [Logging](#logging)
+   - [Recommended lambda environment variables:](#recommended-lambda-environment-variables:)
 - [Testing](#testing)
 - [Running custom runtime locally](#running-custom-runtime-locally)
 - [Lambda examples](#lambda-examples)
