@@ -266,6 +266,17 @@ Logging support is configured via environment variables:
 |LAMBDA_RUNTIME_LOG_FORMAT|`JSON_ARRAY` or `JSON_STRING`| whether to combine log events between request and response as an array of strings or a single string.
 |LAMBDA_RUNTIME_LOG_RESPONSE_INCLUDE_REQUEST|`ON` or `OFF`| when `ON` request input will be logged two times, first as a REQUEST event, then again repeated in a RESPONSE event in order to facilitate CloudWatch query filtering on both input and output fields at the same time.
 
+### Recommended lambda environment variables:
+
+```
+ANSI_COLORS_MODE: OFF
+AWS_CLIENT_DEBUG_MODE: ON
+LAMBDA_RUNTIME_DEBUG_MODE: ON
+LAMBDA_RUNTIME_LOG_FORMAT: JSON_ARRAY
+LAMBDA_RUNTIME_LOG_RESPONSE_INCLUDE_REQUEST: ON
+LAMBDA_RUNTIME_LOG_TYPE: STRUCTURED
+```
+
 ## Testing
 
 Custom runtime supports unit testing out-of the box via dedicated method, reducing the need for an HTTP server-client setup:
